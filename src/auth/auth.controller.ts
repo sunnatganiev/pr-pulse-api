@@ -16,11 +16,7 @@ import { AuthService } from './auth.service';
 import { GithubAuthGuard } from './guards/github-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { MeResponseDto } from './dto/me-response.dto';
-import {
-  DEFAULT_COOKIE_NAME,
-  buildClearCookieOptions,
-  buildCookieOptions,
-} from './auth.constants';
+import { DEFAULT_COOKIE_NAME, buildClearCookieOptions, buildCookieOptions } from './auth.constants';
 import { User } from './entities/user.entity';
 import { GitHubProfile } from './types/github-profile.type';
 
@@ -36,11 +32,9 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly config: ConfigService,
   ) {
-    this.cookieName =
-      this.config.get<string>('COOKIE_NAME') ?? DEFAULT_COOKIE_NAME;
+    this.cookieName = this.config.get<string>('COOKIE_NAME') ?? DEFAULT_COOKIE_NAME;
     this.isProd = this.config.get<string>('NODE_ENV') === 'production';
-    this.webUrl =
-      this.config.get<string>('WEB_URL') ?? 'http://localhost:5173';
+    this.webUrl = this.config.get<string>('WEB_URL') ?? 'http://localhost:5173';
   }
 
   @Get('github')
@@ -53,10 +47,7 @@ export class AuthController {
   @Get('github/callback')
   @UseGuards(GithubAuthGuard)
   @ApiOperation({ summary: 'GitHub OAuth callback — sets cookie and redirects to web' })
-  async githubCallback(
-    @Req() req: Request,
-    @Res() res: Response,
-  ): Promise<void> {
+  async githubCallback(@Req() req: Request, @Res() res: Response): Promise<void> {
     const profile = req.user as GitHubProfile | undefined;
     if (!profile) {
       res.redirect(`${this.webUrl}/?error=oauth_failed`);
@@ -82,6 +73,17 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Clears the auth cookie' })
   logout(@Res() res: Response): void {
+    res.clearCookie(this.cookieName, buildClearCookieOptions(this.isProd));
+    res.status(HttpStatus.NO_CONTENT).end();
+  }
+
+  @Post('logout/all')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Revokes all sessions across every device' })
+  async logoutAll(@Req() req: Request, @Res() res: Response): Promise<void> {
+    const user = req.user as User;
+    await this.authService.invalidateAllSessions(user.id);
     res.clearCookie(this.cookieName, buildClearCookieOptions(this.isProd));
     res.status(HttpStatus.NO_CONTENT).end();
   }

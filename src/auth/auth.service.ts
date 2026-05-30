@@ -45,7 +45,16 @@ export class AuthService {
   }
 
   generateJwt(user: User): string {
-    const payload: JwtPayload = { sub: user.id, githubId: user.githubId };
+    const payload: JwtPayload = {
+      sub: user.id,
+      githubId: user.githubId,
+      tokenVersion: user.tokenVersion,
+    };
     return this.jwtService.sign(payload);
+  }
+
+  async invalidateAllSessions(userId: string): Promise<void> {
+    await this.userRepo.increment({ id: userId }, 'tokenVersion', 1);
+    this.logger.log(`Invalidated all sessions for user ${userId}`);
   }
 }

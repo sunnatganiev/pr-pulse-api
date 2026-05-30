@@ -9,6 +9,7 @@ interface UserRepoMock {
   findOne: jest.Mock;
   create: jest.Mock;
   save: jest.Mock;
+  increment: jest.Mock;
 }
 
 describe('AuthService', () => {
@@ -28,6 +29,7 @@ describe('AuthService', () => {
       findOne: jest.fn(),
       create: jest.fn(),
       save: jest.fn(),
+      increment: jest.fn(),
     };
     jwtService = { sign: jest.fn() };
 
@@ -53,6 +55,7 @@ describe('AuthService', () => {
         createdAt: new Date('2024-01-01T00:00:00Z'),
         updatedAt: new Date('2024-01-01T00:00:00Z'),
         lastLoginAt: null,
+        tokenVersion: 0,
       };
       repo.findOne.mockResolvedValueOnce(existing);
       repo.save.mockImplementationOnce(async (u: User) => u);
@@ -81,6 +84,7 @@ describe('AuthService', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         lastLoginAt: new Date(),
+        tokenVersion: 0,
       };
       repo.save.mockResolvedValueOnce(saved);
 
@@ -106,14 +110,12 @@ describe('AuthService', () => {
 
       await service.findOrCreateUser(noEmailProfile);
 
-      expect(repo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ email: null }),
-      );
+      expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ email: null }));
     });
   });
 
   describe('generateJwt', () => {
-    it('signs a payload with sub=user.id and githubId, returning the token verbatim', () => {
+    it('signs a payload with sub, githubId and tokenVersion, returning the token verbatim', () => {
       const user: User = {
         id: 'user-uuid',
         githubId: 99,
@@ -123,6 +125,7 @@ describe('AuthService', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         lastLoginAt: null,
+        tokenVersion: 3,
       };
       jwtService.sign.mockReturnValueOnce('signed.jwt.token');
 
@@ -131,8 +134,28 @@ describe('AuthService', () => {
       expect(jwtService.sign).toHaveBeenCalledWith({
         sub: 'user-uuid',
         githubId: 99,
+        tokenVersion: 3,
       });
       expect(token).toBe('signed.jwt.token');
+    });
+  });
+
+  describe('invalidateAllSessions', () => {
+    it('atomically increments tokenVersion for the given user via Repository.increment', async () => {
+      repo.increment.mockResolvedValueOnce({ affected: 1 });
+
+      await service.invalidateAllSessions('user-uuid');
+
+      expect(repo.increment).toHaveBeenCalledTimes(1);
+      expect(repo.increment).toHaveBeenCalledWith({ id: 'user-uuid' }, 'tokenVersion', 1);
+    });
+
+    it('resolves to void on success', async () => {
+      repo.increment.mockResolvedValueOnce({ affected: 1 });
+
+      const result = await service.invalidateAllSessions('user-uuid');
+
+      expect(result).toBeUndefined();
     });
   });
 });

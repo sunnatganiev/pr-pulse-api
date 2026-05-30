@@ -36,6 +36,10 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     if (!user) {
       throw new UnauthorizedException('User no longer exists');
     }
+    const payloadVersion = payload.tokenVersion ?? 0;
+    if (payloadVersion !== user.tokenVersion) {
+      throw new UnauthorizedException('Session has been revoked');
+    }
     return user;
   }
 }

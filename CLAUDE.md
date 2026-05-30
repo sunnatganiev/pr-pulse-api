@@ -6,7 +6,7 @@
 ichki dashboard backend'i. Frontend alohida repo: `pr-pulse-web` (React + Vite,
 `http://localhost:5173`).
 
-**Hozirgi bosqich**: Session 2 yakunlandi — GitHub OAuth + JWT auth qo'shildi.
+**Hozirgi bosqich**: Session 2 yakunlandi — GitHub OAuth + JWT auth + logout-all qo'shildi.
 
 Sessiya yo'l xaritasi:
 
@@ -72,13 +72,14 @@ Sessiya yo'l xaritasi:
 - Cookie nomi: `prpulse_jwt` (env: `COOKIE_NAME`, fallback `auth.constants.ts`)
 - Cookie: `httpOnly: true`, `sameSite: 'lax'`, `secure: true` (production), `path: '/'`
 - JWT expire: **7 kun** (env: `JWT_EXPIRES_IN`)
-- JWT payload: `{ sub: user.id, githubId: user.githubId }` (minimal — username/avatar embed qilinmaydi)
+- JWT payload: `{ sub: user.id, githubId: user.githubId, tokenVersion }` — minimal + global revocation uchun `tokenVersion`
 - JWT cookie'dan o'qiladi (Authorization header EMAS) — `jwt.strategy.ts`'da custom extractor
 - GitHub access token database'da saqlanmaydi — faqat `lastLoginAt`
 - Unique kalit: `User.githubId` Postgres'da **bigint** + transformer (string ↔ number)
 - `synchronize: false` — schema o'zgarishlari faqat migration orqali
 - `/auth/me` raw `User` qaytarmaydi — `MeResponseDto.fromUser()` orqali sanitize qilinadi
 - Logout `buildClearCookieOptions` ishlatadi (maxAge'siz) — `Expires: 1970` bilan to'g'ri tozalanadi
+- **Global session revocation**: `User.tokenVersion` (integer, default 0). Logout-all `Repository.increment('tokenVersion', 1)` chaqiradi — atomik. `JwtStrategy.validate()` har so'rovda `payload.tokenVersion === user.tokenVersion` tekshiradi (mos kelmasa 401). Token blacklist o'rniga — eski JWT'larda `tokenVersion` undefined bo'lsa, `0` deb hisoblanadi (backward compat).
 
 ## Frontend bilan integratsiya
 
@@ -127,6 +128,12 @@ Login flow:
 
 ### `POST /auth/logout`
 **204 No Content** + `Set-Cookie: prpulse_jwt=; Expires=Thu, 01 Jan 1970 ...`
+
+### `POST /auth/logout/all` (JWT guard)
+- `User.tokenVersion` ni atomik increment qiladi → boshqa qurilmalardagi mavjud JWT'lar keyingi so'rovda 401 oladi
+- Joriy qurilma cookie'sini ham tozalaydi
+- **204 No Content** + `Set-Cookie: prpulse_jwt=; Expires=Thu, 01 Jan 1970 ...`
+- **401** — cookie yo'q yoki yaroqsiz
 
 ## YAGNI ro'yxati (hozir kerak EMAS)
 

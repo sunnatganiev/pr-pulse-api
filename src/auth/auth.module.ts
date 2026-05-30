@@ -22,8 +22,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
         if (!secret) {
           throw new Error('JWT_SECRET must be set');
         }
-        const expiresIn =
-          config.get<string>('JWT_EXPIRES_IN') ?? DEFAULT_JWT_EXPIRES_IN;
+        const expiresIn = config.get<string>('JWT_EXPIRES_IN') ?? DEFAULT_JWT_EXPIRES_IN;
         return {
           secret,
           signOptions: { expiresIn: expiresIn as unknown as number },

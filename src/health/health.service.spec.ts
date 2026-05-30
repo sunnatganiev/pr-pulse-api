@@ -11,10 +11,7 @@ describe('HealthService', () => {
     dataSource = { query: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        HealthService,
-        { provide: DataSource, useValue: dataSource },
-      ],
+      providers: [HealthService, { provide: DataSource, useValue: dataSource }],
     }).compile();
 
     service = module.get<HealthService>(HealthService);
