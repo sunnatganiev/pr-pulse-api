@@ -1,7 +1,19 @@
 # PR Pulse API
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](https://nodejs.org)
+[![NestJS](https://img.shields.io/badge/NestJS-10-ea2845.svg)](https://nestjs.com)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](https://www.typescriptlang.org)
+
+> **Status**: Session 1 scaffold — work in progress. Production features
+> (auth, PR fetching, AI summaries) are coming in subsequent sessions.
+
 Internal dashboard backend that aggregates GitHub PRs and produces AI-generated
 summaries. Built with NestJS (Standard Mode), TypeORM 0.3, and PostgreSQL 16.
+
+This is a learning project built incrementally with Claude Code over multiple
+sessions, documenting an iterative approach to constructing a production-shaped
+NestJS backend from scratch.
 
 ## Tech stack
 
@@ -93,3 +105,17 @@ Each feature lives in `src/<feature>/` with its own module, controller, service,
   ```json
   { "status": "error", "db": "disconnected", "timestamp": "2026-05-30T12:34:56.789Z" }
   ```
+
+## Roadmap
+
+- [x] **Session 1** — Scaffold: NestJS + TypeORM + `/health` + Swagger
+- [ ] **Session 2** — GitHub OAuth, users module, JWT auth
+- [ ] **Session 3** — Fetch GitHub PRs from authenticated users' repos
+- [ ] **Session 4** — AI summarization via the Anthropic API
+- [ ] **Session 6** — GitHub webhooks + background jobs
+
+A separate `pr-pulse-web` repository will host the React + Vite frontend.
+
+## License
+
+This project is released under the [MIT License](LICENSE).

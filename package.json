@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "PR Pulse — internal dashboard for GitHub PRs with AI summarization",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
