@@ -12,7 +12,7 @@ export const buildDataSourceOptions = (): DataSourceOptions => ({
   database: process.env.DB_NAME ?? 'pr_pulse',
   entities: [__dirname + '/../**/*.entity.{ts,js}'],
   migrations: [__dirname + '/migrations/*.{ts,js}'],
-  synchronize: process.env.NODE_ENV !== 'production',
+  synchronize: false,
   logging: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
 });
 

@@ -6,13 +6,13 @@
 ichki dashboard backend'i. Frontend alohida repo: `pr-pulse-web` (React + Vite,
 `http://localhost:5173`).
 
-**Hozirgi bosqich**: Session 2 — GitHub OAuth + JWT auth qo'shilmoqda.
+**Hozirgi bosqich**: Session 2 yakunlandi — GitHub OAuth + JWT auth qo'shildi.
 
 Sessiya yo'l xaritasi:
 
 - **Session 1**: backend skeleti — health check, DB ulanish, Swagger ✅
-- **Session 2 (joriy)**: GitHub OAuth + users moduli + JWT auth
-- **Session 3**: GitHub PR'larni fetch qilish + prs moduli
+- **Session 2**: GitHub OAuth + users moduli + JWT auth ✅
+- **Session 3 (keyingi)**: GitHub PR'larni fetch qilish + prs moduli
 - **Session 4**: AI summarization (Anthropic API)
 - **Session 6**: GitHub webhooks + jobs moduli
 
@@ -69,10 +69,16 @@ Sessiya yo'l xaritasi:
 
 - Flow: GitHub OAuth → JWT
 - JWT **httpOnly cookie**'da saqlanadi (localStorage'da EMAS!)
-- Cookie: `httpOnly: true`, `sameSite: 'lax'`, `secure: true` (production)
-- JWT expire: **7 kun**
+- Cookie nomi: `prpulse_jwt` (env: `COOKIE_NAME`, fallback `auth.constants.ts`)
+- Cookie: `httpOnly: true`, `sameSite: 'lax'`, `secure: true` (production), `path: '/'`
+- JWT expire: **7 kun** (env: `JWT_EXPIRES_IN`)
+- JWT payload: `{ sub: user.id, githubId: user.githubId }` (minimal — username/avatar embed qilinmaydi)
+- JWT cookie'dan o'qiladi (Authorization header EMAS) — `jwt.strategy.ts`'da custom extractor
 - GitHub access token database'da saqlanmaydi — faqat `lastLoginAt`
-- Unique kalit: `User.githubId` (email EMAS — email private bo'lishi mumkin)
+- Unique kalit: `User.githubId` Postgres'da **bigint** + transformer (string ↔ number)
+- `synchronize: false` — schema o'zgarishlari faqat migration orqali
+- `/auth/me` raw `User` qaytarmaydi — `MeResponseDto.fromUser()` orqali sanitize qilinadi
+- Logout `buildClearCookieOptions` ishlatadi (maxAge'siz) — `Expires: 1970` bilan to'g'ri tozalanadi
 
 ## Frontend bilan integratsiya
 
@@ -102,6 +108,25 @@ Login flow:
 ```json
 { "status": "error", "db": "disconnected", "timestamp": "ISO 8601 string" }
 ```
+
+### `GET /auth/github`
+**302** → `https://github.com/login/oauth/authorize?...` (passport-github2 redirect)
+
+### `GET /auth/github/callback?code=...`
+- User'ni topadi/yaratadi (`User.githubId` bo'yicha), `lastLoginAt` yangilaydi
+- JWT chiqaradi, `prpulse_jwt` cookie'ga yozadi
+- **302** → `${WEB_URL}/`
+
+### `GET /auth/me` (JWT guard)
+**200 OK** — `MeResponseDto`:
+```json
+{ "id": "uuid", "githubId": 12345, "username": "...", "email": "...|null",
+  "avatarUrl": "...", "lastLoginAt": "ISO|null", "createdAt": "ISO" }
+```
+**401** — cookie yo'q yoki yaroqsiz
+
+### `POST /auth/logout`
+**204 No Content** + `Set-Cookie: prpulse_jwt=; Expires=Thu, 01 Jan 1970 ...`
 
 ## YAGNI ro'yxati (hozir kerak EMAS)
 
