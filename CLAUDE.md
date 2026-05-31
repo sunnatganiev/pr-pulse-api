@@ -6,13 +6,14 @@
 ichki dashboard backend'i. Frontend alohida repo: `pr-pulse-web` (React + Vite,
 `http://localhost:5173`).
 
-**Hozirgi bosqich**: Session 2 yakunlandi — GitHub OAuth + JWT auth + logout-all qo'shildi.
+**Hozirgi bosqich**: Session 3 boshlandi — GitHub fetch layer (`src/github/`,
+Octokit) qo'shildi; `prs` moduli (persistence + endpoint) keyingi qadam.
 
 Sessiya yo'l xaritasi:
 
 - **Session 1**: backend skeleti — health check, DB ulanish, Swagger ✅
 - **Session 2**: GitHub OAuth + users moduli + JWT auth ✅
-- **Session 3 (keyingi)**: GitHub PR'larni fetch qilish + prs moduli
+- **Session 3 (joriy)**: GitHub PR'larni fetch qilish (`github` fetch layer ✅) + prs moduli
 - **Session 4**: AI summarization (Anthropic API)
 - **Session 6**: GitHub webhooks + jobs moduli
 
@@ -80,6 +81,24 @@ Sessiya yo'l xaritasi:
 - `/auth/me` raw `User` qaytarmaydi — `MeResponseDto.fromUser()` orqali sanitize qilinadi
 - Logout `buildClearCookieOptions` ishlatadi (maxAge'siz) — `Expires: 1970` bilan to'g'ri tozalanadi
 - **Global session revocation**: `User.tokenVersion` (integer, default 0). Logout-all `Repository.increment('tokenVersion', 1)` chaqiradi — atomik. `JwtStrategy.validate()` har so'rovda `payload.tokenVersion === user.tokenVersion` tekshiradi (mos kelmasa 401). Token blacklist o'rniga — eski JWT'larda `tokenVersion` undefined bo'lsa, `0` deb hisoblanadi (backward compat).
+
+## GitHub integratsiyasi qoidalari
+
+- Octokit (REST API) ishlatamiz — `@octokit/rest` paketi
+- **Versiya**: `@octokit/rest@19` — oxirgi CommonJS versiya. v22 ESM-only
+  (`"type": "module"`) → CommonJS NestJS/ts-jest bilan `ERR_REQUIRE_ESM` beradi.
+  Type'lar paket ichida keladi (alohida `@types/...` kerak emas).
+- GitHub API rate limit: 5000 req/hour authenticated
+- Rate limit'ga e'tibor: try/catch + warning log (`GithubService.mapGithubError`)
+- Octokit DI: `OCTOKIT` injection token + `useFactory(ConfigService)` —
+  testda mock qilish va kelajakda per-user token uchun reusable
+  (`src/github/github.module.ts`)
+- Error mapping: 401→Unauthorized, 403→ServiceUnavailable (+warn), 404→NotFound,
+  boshqa→BadGateway. Status duck-typing bilan (`RequestError` import qilmaymiz)
+- User'ning GitHub access token DB'da SAQLANMAYDI (Session 2 qarori)
+- Hozircha: development'da `GITHUB_TOKEN_DEV` env'dan o'qiymiz (suboptimal)
+- Session 5'da: GitHub MCP server bilan yaxshilanadi
+- Modul hujjati: `src/github/CLAUDE.md`
 
 ## Frontend bilan integratsiya
 
@@ -162,9 +181,11 @@ Har bir komanda dokumentatsiya + $ARGUMENTS dinamik input + bosqichlar + output 
 
 ## Bu sessiya doirasidan TASHQARI
 
-- GitHub'dan PR fetching — **Session 3**
+- PR/Repo persistence (entity + migration) + `prs` moduli endpoint'lari —
+  **Session 3 davomi**
 - AI summarization — **Session 4**
-- Webhooks — **Session 6**
+- GitHub webhooks + background sync jobs — **Session 6**
+- Batch fetch optimization — kerak bo'lganda
 
 Foydalanuvchi shu mavzularni so'rasa, eslatib qo'y:
 > "Bu Session [N]'da rejalashtirilgan."
