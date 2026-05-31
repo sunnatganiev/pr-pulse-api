@@ -6,14 +6,15 @@
 ichki dashboard backend'i. Frontend alohida repo: `pr-pulse-web` (React + Vite,
 `http://localhost:5173`).
 
-**Hozirgi bosqich**: Session 3 boshlandi — GitHub fetch layer (`src/github/`,
-Octokit) qo'shildi; `prs` moduli (persistence + endpoint) keyingi qadam.
+**Hozirgi bosqich**: Session 3 yakunlandi — GitHub fetch layer (`src/github/`,
+Octokit) + `prs` moduli (PR persistence, upsert sync, JWT bilan himoyalangan
+`/prs` endpointlar).
 
 Sessiya yo'l xaritasi:
 
 - **Session 1**: backend skeleti — health check, DB ulanish, Swagger ✅
 - **Session 2**: GitHub OAuth + users moduli + JWT auth ✅
-- **Session 3 (joriy)**: GitHub PR'larni fetch qilish (`github` fetch layer ✅) + prs moduli
+- **Session 3**: GitHub PR'larni fetch qilish (`github` fetch layer ✅) + prs moduli ✅
 - **Session 4**: AI summarization (Anthropic API)
 - **Session 6**: GitHub webhooks + jobs moduli
 
@@ -100,6 +101,23 @@ Sessiya yo'l xaritasi:
 - Session 5'da: GitHub MCP server bilan yaxshilanadi
 - Modul hujjati: `src/github/CLAUDE.md`
 
+## PRs moduli qoidalari
+
+- `PullRequest` entity: `githubId` (bigint, unique) — sync uchun konflikt kaliti
+- **Upsert sync**: `Repository.upsert(rows, { conflictPaths: ['githubId'] })` —
+  atomik `ON CONFLICT DO UPDATE`, `findOne+save` loop EMAS
+- **`state` enum** (`PullRequestState`: open/closed/merged) — loyihadagi birinchi
+  Postgres enum (`enumName: 'pull_requests_state_enum'`). `deriveState`:
+  `mergedAt != null` → merged (GitHub `state` faqat open/closed beradi)
+- `createdAt/updatedAt/mergedAt` — GitHub PR vaqtlari (oddiy `timestamptz`,
+  `@CreateDateColumn` EMAS); DB freshness → `lastSyncedAt`
+- **Birinchi class-validator request DTO'lari** (`PrFilterDto`, `SyncPrsDto`) —
+  global `ValidationPipe` (`transform: true`) bilan
+- `JwtAuthGuard` `../auth/guards`'dan import; `PrsModule` `AuthModule` import
+  qilmaydi (JwtStrategy global registry'da). `GithubModule` import qilinadi
+- `bigintToNumber` transformer auth + prs'da takror (YAGNI — `src/common/` yo'q)
+- Modul hujjati: `src/prs/CLAUDE.md`
+
 ## Frontend bilan integratsiya
 
 - API origin: `http://localhost:3000`
@@ -154,6 +172,21 @@ Login flow:
 - **204 No Content** + `Set-Cookie: prpulse_jwt=; Expires=Thu, 01 Jan 1970 ...`
 - **401** — cookie yo'q yoki yaroqsiz
 
+### `GET /prs` (JWT guard)
+Query: `state?` (open|closed|merged), `repo?` (repoFullName), `author?`
+(authorUsername), `limit?` (1–100, default 30), `offset?` (≥0, default 0).
+**200 OK** — `PullRequest[]` (`createdAt DESC`). **401** — cookie yo'q/yaroqsiz.
+
+### `POST /prs/sync` (JWT guard)
+Body: `{ "repoFullName": "owner/repo" }`. GitHub'dan PR'larni oladi,
+`githubId` bo'yicha upsert qiladi.
+**200 OK** — sync qilingan `PullRequest[]`. **400** — repoFullName formati noto'g'ri.
+**401** — cookie yo'q/yaroqsiz.
+
+### `GET /prs/:id` (JWT guard)
+**200 OK** — `PullRequest`. **400** — `id` yaroqsiz uuid. **404** — topilmadi.
+**401** — cookie yo'q/yaroqsiz.
+
 ## Izohiy komandalar (Team-wide custom slash commands)
 
 `.claude/commands/` bo'limida saqlanadi:
@@ -181,8 +214,6 @@ Har bir komanda dokumentatsiya + $ARGUMENTS dinamik input + bosqichlar + output 
 
 ## Bu sessiya doirasidan TASHQARI
 
-- PR/Repo persistence (entity + migration) + `prs` moduli endpoint'lari —
-  **Session 3 davomi**
 - AI summarization — **Session 4**
 - GitHub webhooks + background sync jobs — **Session 6**
 - Batch fetch optimization — kerak bo'lganda
