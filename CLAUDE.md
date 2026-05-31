@@ -135,6 +135,22 @@ Login flow:
 - **204 No Content** + `Set-Cookie: prpulse_jwt=; Expires=Thu, 01 Jan 1970 ...`
 - **401** — cookie yo'q yoki yaroqsiz
 
+## Izohiy komandalar (Team-wide custom slash commands)
+
+`.claude/commands/` bo'limida saqlanadi:
+
+- **`/explore`** — modul yoki fayl arxitekturasini tushun va tushuntir.
+  Ishlatish: `@ARGUMENTS` ning qaidi bo'lsa, barcha `.ts` fayllarni o'qiy.
+  
+- **`/review-changes`** — staging area'dagi o'zgarishlari senior muhandis ko'ziga qarab tekshir.
+  Qo'llash: pre-commit yoki PR self-review'dan oldin.
+  
+- **`/debug-prod`** — production bug'ni qat'iy pattern bilan debug qil.
+  Bosqich: bug tushun → kod joylash → failing test yozish → root cause → minimal fix → postmortem.
+  Qo'llashsa: QA dan xabar olgan har qanday bug report'i.
+
+Har bir komanda dokumentatsiya + $ARGUMENTS dinamik input + bosqichlar + output format.
+
 ## YAGNI ro'yxati (hozir kerak EMAS)
 
 - Refresh tokens (Session 6'da ko'rib chiqamiz)
